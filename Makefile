@@ -1,4 +1,4 @@
-SOURCES = $(wildcard *.cpp)
+SOURCES = $(wildcard *.cpp crypto)
 OBJECTS = $(SOURCES:.cpp=.o)
 DEPENDS = $(SOURCES:.cpp=.d)
 CXX = g++
