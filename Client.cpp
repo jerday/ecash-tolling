@@ -1,6 +1,9 @@
 #include "Client.hpp"
 #include "Server.hpp"
 
+#include <openssl/rand.h>
+
+
 Client::Client() {
 }
 
