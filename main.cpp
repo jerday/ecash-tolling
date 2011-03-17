@@ -4,6 +4,7 @@
 
 int main(int argc, char** argv)
 {
+	Server::key_generation();
 	return 0;
 }
 

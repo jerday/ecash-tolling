@@ -1,7 +1,7 @@
 SOURCES = $(wildcard *.cpp crypto)
 OBJECTS = $(SOURCES:.cpp=.o)
 DEPENDS = $(SOURCES:.cpp=.d)
-CXX = g++
+CXX = g++ -lcrypto
 MAIN = main
 
 all: $(MAIN)
