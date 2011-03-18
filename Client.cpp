@@ -44,8 +44,9 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 	// _i = (some unique identity);
 	RAND_bytes(_i,32);
 
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
+	SHA256_CTX sha256;
+	SHA256_Init(&sha256);
+	BN_CTX * bnCtx = BN_CTX_new();
 	for(int i = 0; i < num_tags; i++) {
 		// For each ticket i, the user sets m = (H(i,r),H(t,s)) where r and
 		// s are random salts.
@@ -61,8 +62,21 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 		SHA256_Final(_m[i]+32,&sha256); // _m[i] = (H(i,r),H(t,s))
 
 		//  The value c = x^e H(m) is sent to the server
+		byte H_m[32];
+		SHA256_Update(&sha256,_m[i],64);
+		SHA256_Final(H_m,&sha256);
 
+		BIGNUM * x = BN_new();
+		BN_rand_range(x,Server::rsa->n); // generate random x less than n
+		// raise x^e
 
+		BIGNUM * x_pow_e = BN_new();
+		BN_mod_exp(x_pow_e,x,Server::rsa->e,Server::rsa->n,bnCtx);
+
+		BIGNUM * bn_H_m = BN_new();
+		BN_bin2bn(H_m,32,bn_H_m);
+		BIGNUM * c = BN_new();
+		BN_mod_mul(c,bn_H_m,x_pow_e,Server::rsa->n,bnCtx);
 	}
 }
 
