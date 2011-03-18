@@ -1,8 +1,10 @@
 #include "Client.hpp"
 #include "Server.hpp"
 
+#include <string.h>
+#include <iostream>
 #include <openssl/rand.h>
-
+#include <openssl/sha.h>
 
 Client::Client() {
 }
@@ -34,18 +36,33 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 		_t[i] = new byte[2];  // not sure about size here
 		_r[i] = new byte[16]; // 128 bit salt
 		_s[i] = new byte[16]; // 128 bit salt
+		RAND_bytes(_r[i],16);
+		RAND_bytes(_s[i],16);
+		// [TODO]: initialize _t for each i
 	}
 
-	// [TODO]:
 	// _i = (some unique identity);
+	RAND_bytes(_i,32);
 
-	for(int t = 0; t < num_times; t++) {
-		for(int j = 0; j < revealed_per_interval; j++) {
-			// For each ticket j*i, the user sets m = (H(i,r),H(t,s)) where r and
-			// s are random salts.
-			// [TODO]:
-			// _m[i*j] = (H(i,r),H(t,s))
-		}
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+	for(int i = 0; i < num_tags; i++) {
+		// For each ticket i, the user sets m = (H(i,r),H(t,s)) where r and
+		// s are random salts.
+		byte ir[48];
+		memcpy(ir,_i,32);
+		memcpy(ir+32,_r[i],16);
+		SHA256_Update(&sha256,ir,48);
+		SHA256_Final(_m[i],&sha256); // m = H(i,r)
+		byte ts[18]; // 2 + 16
+		memcpy(ts,_t[i],2);
+		memcpy(ts+2,_s[i],16);
+		SHA256_Update(&sha256,ts,48);
+		SHA256_Final(_m[i]+32,&sha256); // _m[i] = (H(i,r),H(t,s))
+
+		//  The value c = x^e H(m) is sent to the server
+
+
 	}
 }
 
