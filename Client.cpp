@@ -3,8 +3,6 @@
 
 #include <string.h>
 #include <iostream>
-#include <openssl/rand.h>
-#include <openssl/sha.h>
 
 Client::Client() {
 }
@@ -27,18 +25,22 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 
 	// Initialize all tag data
 	_m = new byte*[num_tags];
-	_t = new byte*[num_tags];
-	_r = new byte*[num_tags];
-	_s = new byte*[num_tags];
-	_sigma = new byte*[num_tags];
+	_t = new int*[num_times];
+	_r = new BIGNUM*[num_tags];
+	_s = new BIGNUM*[num_tags];
+	_sigma = new BIGNUM*[num_tags];
+
 	for(int i = 0; i < num_tags; i++) {
 		_m[i] = new byte[64];
-		_t[i] = new byte[2];  // not sure about size here
-		_r[i] = new byte[16]; // 128 bit salt
-		_s[i] = new byte[16]; // 128 bit salt
-		RAND_bytes(_r[i],16);
-		RAND_bytes(_s[i],16);
-		// [TODO]: initialize _t for each i
+		_r[i] = BN_new();
+		_s[i] = BN_new();
+		_sigma[i] = BN_new();
+		BN_rand(_r[i],128,-1,-1);
+		BN_rand(_s[i],128,-1,-1);
+	}
+
+	for(int i = 0; i < num_times; i++) {
+		_t[i] = new int(i);
 	}
 
 	// _i = (some unique identity);
@@ -56,7 +58,7 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 		SHA256_Update(&sha256,ir,48);
 		SHA256_Final(_m[i],&sha256); // m = H(i,r)
 		byte ts[18]; // 2 + 16
-		memcpy(ts,_t[i],2);
+		memcpy(ts,_t[i%num_times],2);
 		memcpy(ts+2,_s[i],16);
 		SHA256_Update(&sha256,ts,48);
 		SHA256_Final(_m[i]+32,&sha256); // _m[i] = (H(i,r),H(t,s))
@@ -67,16 +69,19 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 		SHA256_Final(H_m,&sha256);
 
 		BIGNUM * x = BN_new();
-		BN_rand_range(x,Server::rsa->n); // generate random x less than n
+		BN_rand_range(x,Server::get_n()); // generate random x less than n
 		// raise x^e
 
 		BIGNUM * x_pow_e = BN_new();
-		BN_mod_exp(x_pow_e,x,Server::rsa->e,Server::rsa->n,bnCtx);
+		BN_mod_exp(x_pow_e,x,Server::get_e(),Server::get_n(),bnCtx);
 
 		BIGNUM * bn_H_m = BN_new();
 		BN_bin2bn(H_m,32,bn_H_m);
 		BIGNUM * c = BN_new();
-		BN_mod_mul(c,bn_H_m,x_pow_e,Server::rsa->n,bnCtx);
+		BN_mod_mul(c,bn_H_m,x_pow_e,Server::get_n(),bnCtx);
+
+		BIGNUM * gamma = Server::compute_gamma(c,bnCtx);
+		BN_div(_sigma[i],NULL,gamma,x,bnCtx);
 	}
 }
 

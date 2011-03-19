@@ -11,7 +11,21 @@ void Server::key_generation() {
 	std::cout << "Key generation complete." << std::endl;
 }
 
+BIGNUM * Server::compute_gamma(BIGNUM * c,BN_CTX * bnCtx) {
+	BIGNUM * gamma = BN_new();
+	BN_mod_exp(gamma,c,rsa->d,rsa->n,bnCtx);
+	return gamma;
+}
+
 void Server::registration() {
+}
+
+BIGNUM * Server::get_n() {
+	return rsa->n;
+}
+
+BIGNUM * Server::get_e() {
+	return rsa->e;
 }
 
 void Server::sign() {

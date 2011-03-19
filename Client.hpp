@@ -2,6 +2,8 @@
 #define CLIENT_HPP
 
 #include <stdint.h>
+#include <openssl/rand.h>
+#include <openssl/sha.h>
 
 typedef uint8_t  byte;
 
@@ -15,10 +17,10 @@ public:
 protected:
 	byte _i[32]; // unique identifier
 	byte ** _m; // array of (H(i,r),H(t,s))
-	byte ** _t; // array of times
-	byte ** _r; // array of random salt
-	byte ** _s; // array of random salt
-	byte ** _sigma; // array of signatures
+	int ** _t; // array of times
+	BIGNUM ** _r; // array of random salt
+	BIGNUM ** _s; // array of random salt
+	BIGNUM ** _sigma; // array of signatures
 };
 
 #endif
