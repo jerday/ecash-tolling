@@ -8,7 +8,7 @@
 using namespace std;
 
 typedef uint8_t byte;
- 
+
 class Server {
 public:
 	static void key_generation();

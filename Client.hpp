@@ -20,10 +20,7 @@ protected:
 	byte _i[32]; // unique identifier
 	byte ** _m; // array of (H(i,r),H(t,s))
 
-	//int ** _t; // array of times
-	//the current simulation completely ignores "time"
-
-	int _t; //current time
+	int ** _t; // array of times
 
 	BIGNUM ** _r; // array of random salt
 	BIGNUM ** _s; // array of random salt
