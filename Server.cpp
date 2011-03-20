@@ -1,7 +1,12 @@
 #include "Server.hpp"
 #include <iostream>
+#include "stdlib.h"
+using namespace std;
 
 RSA * Server::rsa = NULL;
+SHA256_CTX Server::sha256;
+byte ** Server::spent_m;
+int Server::spent_num;
 
 static int RSA_eay_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa, BN_CTX *ctx)
 	{
@@ -205,20 +210,19 @@ bool used (byte * _m1, byte * _m2) {
 		if (_m1[i] != _m2[i])
 			return false;
 	}
-	return true;
 }
 
 bool Server::verify_token (byte * h, int t, BIGNUM * s, BIGNUM * sigma) {
 	//now it is a naive solution, we simply use an array
 	byte* _m = new byte [64];
-	memcpy (_m, h, 32);
+	//memcpy (_m, h, 32);
 
 	//compute m = (h, H(t,s))
 	byte ts[20]; // 4 + 16
-	memcpy(ts,&t, 4);
-	memcpy(ts+4,_s[i],16);
+	//memcpy(ts,&t, 4);
+	//memcpy(ts+4,s,16);
 	SHA256_Update(&sha256,ts,48);
-	SHA256_Final(_m[i]+32,&sha256); // _m[i] = (H(i,r),H(t,s))
+	SHA256_Final(_m+32,&sha256); // _m[i] = (H(i,r),H(t,s))
 
 	//verifies that t is correct
 	if (t != 1) {
@@ -238,7 +242,7 @@ bool Server::verify_token (byte * h, int t, BIGNUM * s, BIGNUM * sigma) {
 
 	//check signature: H(m) = sigma^e
 	byte H_m[32];
-	SHA256_Update(&sha256,_m[i],64);
+	SHA256_Update(&sha256,_m,64);
 	SHA256_Final(H_m,&sha256);
 
 	BN_CTX * bnCtx = BN_CTX_new();
@@ -248,5 +252,12 @@ bool Server::verify_token (byte * h, int t, BIGNUM * s, BIGNUM * sigma) {
 	BIGNUM * bn_H_m = BN_new();
 	BN_bin2bn(H_m,32,bn_H_m);
 
-
+	if (BN_cmp (sigma_pow_e, bn_H_m) == 0) {
+		//valid signature
+		return true;
+	} else {
+		//invalid signature
+		printf ("Server: Invalid signature\n");
+		return false;
+	}
 }

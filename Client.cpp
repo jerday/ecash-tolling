@@ -161,5 +161,4 @@ void Client::reveal(float percentage) {
 }
 
 void Client::payment() {
-
 }
