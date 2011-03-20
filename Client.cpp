@@ -1,8 +1,12 @@
 #include "Client.hpp"
 #include "Server.hpp"
 
+#include "stdlib.h"
 #include <string.h>
 #include <iostream>
+#include <time.h>
+
+double tstart, tstop, ttime;
 
 Client::Client() {
 }
@@ -49,9 +53,13 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 	SHA256_CTX sha256;
 	SHA256_Init(&sha256);
 	BN_CTX * bnCtx = BN_CTX_new();
+
+tstart = (double)clock() / CLOCKS_PER_SEC;
+
 	for(int i = 0; i < num_tags; i++) {
 		// For each ticket i, the user sets m = (H(i,r),H(t,s)) where r and
 		// s are random salts.
+
 		byte ir[48];
 		memcpy(ir,_i,32);
 		memcpy(ir+32,_r[i],16);
@@ -77,12 +85,17 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 
 		BIGNUM * bn_H_m = BN_new();
 		BN_bin2bn(H_m,32,bn_H_m);
+
 		BIGNUM * c = BN_new();
 		BN_mod_mul(c,bn_H_m,x_pow_e,Server::get_n(),bnCtx);
 
 		BIGNUM * gamma = Server::compute_gamma(c,bnCtx);
 		BN_div(_sigma[i],NULL,gamma,x,bnCtx);
+
 	}
+tstop = (double)clock() / CLOCKS_PER_SEC;
+
+printf ("time spent in phase 2: %4.10f\n", tstop - tstart); 
 }
 
 void Client::reveal() {
