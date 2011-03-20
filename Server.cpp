@@ -175,8 +175,8 @@ void Server::key_generation() {
 
 BIGNUM * Server::compute_gamma(BIGNUM * c,BN_CTX * bnCtx) {
 	BIGNUM * gamma = BN_new();
-	BN_mod_exp(gamma,c,rsa->d,rsa->n,bnCtx);
-	//RSA_eay_mod_exp(gamma, c, rsa, bnCtx);
+//	BN_mod_exp(gamma,c,rsa->d,rsa->n,bnCtx);
+	RSA_eay_mod_exp(gamma, c, rsa, bnCtx);
 
 	return gamma;
 }
