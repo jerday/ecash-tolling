@@ -110,7 +110,7 @@ int i = 0;
 		*/
 
 		byte ts[20]; // 4 + 16
-		memcpy(ts,_t, 4);
+		memcpy(ts,&_t, 4);
 		memcpy(ts+4,_s[i],16);
 		SHA256_Update(&sha256,ts,48);
 		SHA256_Final(_m[i]+32,&sha256); // _m[i] = (H(i,r),H(t,s))
@@ -152,7 +152,7 @@ void Client::reveal(float percentage) {
 	int i;
 	for (i = 0; i < tokens_spent; ++i) {
 		//now spend all the tokens
-		if (Server::verify_token (_i, _m[i], _t, _s[i], _sigma[i])) {
+		if (Server::verify_token (_m[i], _t, _s[i], _sigma[i])) {
 			printf ("token# %d verified\n", i);
 		} else {
 			printf ("token# %d not verified\n", i);
