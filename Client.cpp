@@ -13,7 +13,7 @@ using namespace std;
 double tstart, tstop, ttime;
 
 Client::Client() {
-	out = BIO_new_file ("debug.log", "w");
+	out = BIO_new_file ("client_debug.log", "w");
 	if (out == NULL) {
 		printf ("debug file failed to establish\n");
 		exit (-1);
@@ -42,6 +42,9 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 
 	int num_times = (int) (revealed_per_interval * 60 * 24 * period_length);
 	num_tags = num_times * tags_each_reveal;
+	
+	//debug 
+	num_tags = 1;
 
 	// Initialize all tag data
 	_m = new byte*[num_tags];
@@ -98,8 +101,10 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 			memcpy(ir+32,_r[i],16);
 			SHA256_Update(&sha256,ir,48);
 			SHA256_Final(_m[i],&sha256); // m = H(i,r)
-			byte ts[18]; // 2 + 16
-			memcpy(ts,_t[i%num_times],2);
+			PN_push
+
+			byte ts[20]; // 4 + 16
+			memcpy(ts,_t[i%num_times],4);
 			memcpy(ts+2,_s[i],16);
 			SHA256_Update(&sha256,ts,48);
 			SHA256_Final(_m[i]+32,&sha256); // _m[i] = (H(i,r),H(t,s))
@@ -136,11 +141,12 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 void Client::reveal(float percentage) {
 	int tokens_spent = num_tags * percentage;
 	//for debug
-	tokens_spent = 2;
+	tokens_spent = 1;
+	printf ("Client::revealing a percentage of %.2g tickets \n", percentage);
 	int i;
 	for (i = 0; i < tokens_spent; ++i) {
 		//now spend all the tokens
-		if (Server::verify_token (_m[i], *_t[i], _s[i], _sigma[i])) {
+		if (Server::verify_token (_m[i], _t[0], _s[i], _sigma[i])) {
 			printf ("token# %d verified\n", i);
 		} else {
 			printf ("token# %d not verified\n", i);

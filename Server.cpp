@@ -1,5 +1,6 @@
 #include "Server.hpp"
 #include <iostream>
+#include <string.h>
 #include "stdlib.h"
 using namespace std;
 
@@ -50,21 +51,27 @@ bool used (byte * _m1, byte * _m2) {
 	}
 }
 
-bool Server::verify_token (byte * h, int t, BIGNUM * s, BIGNUM * sigma) {
+
+bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma) {
+
+	printf ("Server::verifying token\n");
+
 	//now it is a naive solution, we simply use an array
 	byte* _m = new byte [64];
-	//memcpy (_m, h, 32);
+	memcpy (_m, h, 32);
 
+	printf ("Server::verifying token1\n");
 	//compute m = (h, H(t,s))
 	byte ts[20]; // 4 + 16
-	//memcpy(ts,&t, 4);
-	//memcpy(ts+4,s,16);
+	memcpy(ts,t, 4);
+	memcpy(ts+4,s,16);
 	SHA256_Update(&sha256,ts,48);
 	SHA256_Final(_m+32,&sha256); // _m[i] = (H(i,r),H(t,s))
 
+	printf ("Server::verifying token2\n");
 	//verifies that t is correct
-	if (t != 1) {
-		printf ("Server: t not correct, should be 1, but now is %d\n", t);
+	if (*t != 1) {
+		printf ("Server: t not correct, should be 1, but now is %d\n", *t);
 	}
 
 	//verifies that m has not been used
@@ -74,21 +81,24 @@ bool Server::verify_token (byte * h, int t, BIGNUM * s, BIGNUM * sigma) {
 			return false;
 		}
 	}
-
+	printf ("Server::verifying token3\n");
 	spent_m[spent_num++] = _m;
 	printf ("Server: new token\n");
 
+	printf ("Server::verifying token4\n");
 	//check signature: H(m) = sigma^e
 	byte H_m[32];
 	SHA256_Update(&sha256,_m,64);
 	SHA256_Final(H_m,&sha256);
 
+	printf ("Server::verifying token5\n");
 	BN_CTX * bnCtx = BN_CTX_new();
 	BIGNUM *sigma_pow_e = BN_new();
 	BN_mod_exp(sigma_pow_e,sigma,Server::get_e(),Server::get_n(),bnCtx);
 
 	BIGNUM * bn_H_m = BN_new();
 	BN_bin2bn(H_m,32,bn_H_m);
+	printf ("Server::verifying token6\n");
 
 	if (BN_cmp (sigma_pow_e, bn_H_m) == 0) {
 		//valid signature
@@ -98,4 +108,5 @@ bool Server::verify_token (byte * h, int t, BIGNUM * s, BIGNUM * sigma) {
 		printf ("Server: Invalid signature\n");
 		return false;
 	}
+	printf ("Server::verifying token3\n");
 }
