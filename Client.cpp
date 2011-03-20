@@ -152,7 +152,7 @@ void Client::reveal(float percentage) {
 	int i;
 	for (i = 0; i < tokens_spent; ++i) {
 		//now spend all the tokens
-		if (Server::verify_token (_m[i], _t, _s[i], _sigma[i])) {
+		if (Server::verify_token (_i, _m[i], _t, _s[i], _sigma[i])) {
 			printf ("token# %d verified\n", i);
 		} else {
 			printf ("token# %d not verified\n", i);

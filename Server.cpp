@@ -197,11 +197,17 @@ BIGNUM * Server::get_e() {
 	return rsa->e;
 }
 
-bool Server::verify_token (byte * h, int t, BIGNUM * s, BIGNUM * sigma) {
-	//compute m = (H(i,r),h)
+bool Server::verify_token (byte *_i, byte * h, int t, BIGNUM * s, BIGNUM * sigma) {
 	//now it is a naive solution, we simply use an array
 	byte* _m = new byte [64];
-	_m 
+	memcpy (_m, h, 32);
+
+	//compute m = (h, H(t,s))
+	byte ir[48];
+	memcpy(ir,_i,32);
+	memcpy(ir+32,_r[i],16);
+	SHA256_Update(&sha256,ir,48);
+	SHA256_Final(_m[i],&sha256); // m = H(i,r)
 
 	//verifies that t is correct
 	//verifies that m has not been used
