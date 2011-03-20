@@ -182,6 +182,11 @@ BIGNUM * Server::compute_gamma(BIGNUM * c,BN_CTX * bnCtx) {
 }
 
 void Server::registration() {
+	spent_m = new byte*[24 * 60];
+	for (int i = 0; i < 24 * 60; ++i) {
+		spent_m[i] = new byte [64];
+	}
+	SHA256_Init(&sha256);
 }
 
 BIGNUM * Server::get_n() {
@@ -192,3 +197,13 @@ BIGNUM * Server::get_e() {
 	return rsa->e;
 }
 
+bool Server::verify_token (byte * h, int t, BIGNUM * s, BIGNUM * sigma) {
+	//compute m = (H(i,r),h)
+	//now it is a naive solution, we simply use an array
+	byte* _m = new byte [64];
+	_m 
+
+	//verifies that t is correct
+	//verifies that m has not been used
+	//check signature: H(m) = sigma^e
+}
