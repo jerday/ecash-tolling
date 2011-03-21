@@ -69,13 +69,12 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 	// _i = (some unique identity);
 	RAND_bytes(_i,32);
 
-	SHA256_CTX sha256;
-	SHA256_Init(&sha256);
 
 	double start = omp_get_wtime( );
 	int tid, nthreads, chunk;
 	chunk = 10;
 	int i = 0;
+	SHA256_CTX sha256;
 
 	#pragma omp parallel default(shared) private(i) \
 		num_threads(1)
@@ -99,6 +98,8 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 			byte ir[48];
 			memcpy(ir,_i,32);
 			memcpy(ir+32,_r[i],16);
+
+			SHA256_Init(&sha256);
 			SHA256_Update(&sha256,ir,48);
 			SHA256_Final(_m[i],&sha256); // m = H(i,r)
 			
@@ -113,7 +114,9 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 			byte ts[20]; // 4 + 16
 			memcpy(ts,_t[i%num_times],4);
 			memcpy(ts+4,_s[i],16);
-			SHA256_Update(&sha256,ts,48);
+			//SHA256_Update(&sha256,ts,0);
+			SHA256_Init(&sha256);
+			SHA256_Update(&sha256,ts,20);
 			SHA256_Final(_m[i]+32,&sha256); // _m[i] = (H(i,r),H(t,s))
 			//SHA256_Final(_m[i],&sha256); // _m[i] = (H(i,r),H(t,s))
 
@@ -134,6 +137,7 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 	//		printf ("Thread %d HERE1: current i = %d\n", tid, i);
 			//  The value c = x^e H(m) is sent to the server
 			byte H_m[32];
+			SHA256_Init(&sha256);
 			SHA256_Update(&sha256,_m[i],64);
 			SHA256_Final(H_m,&sha256);
 
@@ -142,6 +146,9 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 			BIGNUM * x = BN_new();
 			BN_rand_range(x,Server::get_n()); // generate random x less than n
 			// raise x^e
+
+			BIO_puts (out, "\nx = ");
+			BN_print (out, x); 
 
 			BIGNUM * x_pow_e = BN_new();
 			BN_mod_exp(x_pow_e,x,Server::get_e(),Server::get_n(),bnCtx);

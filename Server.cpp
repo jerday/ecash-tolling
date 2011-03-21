@@ -22,10 +22,10 @@ void Server::key_generation() {
 
 BIGNUM * Server::compute_gamma(BIGNUM * c,BN_CTX * bnCtx) {
 	BIGNUM * gamma = BN_new();
-	//BN_mod_exp(gamma,c,rsa->d,rsa->n,bnCtx); // slowest
+	BN_mod_exp(gamma,c,rsa->d,rsa->n,bnCtx); // slowest
 	//RSA_eay_mod_exp(gamma, c, rsa, bnCtx);  // better, requires copy paste function
-	BN_MONT_CTX * montCtx = BN_MONT_CTX_new();
-	BN_mod_exp_mont(gamma,c,rsa->d,rsa->n,bnCtx,montCtx);
+	//BN_MONT_CTX * montCtx = BN_MONT_CTX_new();
+	//BN_mod_exp_mont(gamma,c,rsa->d,rsa->n,bnCtx,montCtx);
 	return gamma;
 }
 
@@ -34,7 +34,6 @@ void Server::registration() {
 	for (int i = 0; i < 24 * 60; ++i) {
 		spent_m[i] = new byte [64];
 	}
-	SHA256_Init(&sha256);
 	spent_num = 0;
 
 	out = BIO_new_file ("server_debug.log", "w");
@@ -71,14 +70,16 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma) {
 	//now it is a naive solution, we simply use an array
 	byte* _m = new byte [64];
 	memcpy (_m, h, 32);
+//	memcpy (_m, h, 64);
 
 	//output m = (H(i,r));
 	//DEBUG
 	BIGNUM * bn_h_i_r = BN_new();
-	BN_bin2bn(_m,32,bn_h_i_r);
+	//BN_bin2bn(_m,32,bn_h_i_r);
+	BN_bin2bn(_m,64,bn_h_i_r);
 	BIO_puts (out, "\nH(i,r) = ");
+	//BIO_puts (out, "\npassed in m = ");
 	BN_print (out, bn_h_i_r);
-
 
 	printf ("Server::verifying token1\n");
 	//compute m = (h, H(t,s))
@@ -92,8 +93,8 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma) {
 	}
 	printf ("\n");
 
-	SHA256_Update(&sha256,ts,48);
-	//SHA256_Final(_m+32,&sha256); // _m[i] = (H(i,r),H(t,s))
+	SHA256_Init(&sha256);
+	SHA256_Update(&sha256,ts,20);
 	SHA256_Final(_m + 32,&sha256); // _m[i] = (H(i,r),H(t,s))
 
 	//output m = (H(i,r), H(t,s));
@@ -124,6 +125,7 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma) {
 	printf ("Server::verifying token4\n");
 	//check signature: H(m) = sigma^e
 	byte H_m[32];
+	SHA256_Init(&sha256);
 	SHA256_Update(&sha256,_m,64);
 	SHA256_Final(H_m,&sha256);
 
