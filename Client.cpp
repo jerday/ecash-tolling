@@ -29,6 +29,7 @@ Client::~Client() {
 	BIO_free (out);
 }
 
+byte ts[2000][20]; // 4 + 16
 /**
  * Client registration.
  *
@@ -44,7 +45,7 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 	num_tags = num_times * tags_each_reveal;
 	
 	//debug 
-	num_tags = 2;
+//	num_tags = 2;
 
 	// Initialize all tag data
 	_m = new byte*[num_tags];
@@ -74,10 +75,10 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 	int tid, nthreads, chunk;
 	chunk = 10;
 	int i = 0;
-	SHA256_CTX sha256;
+
 
 	#pragma omp parallel default(shared) private(i) \
-		num_threads(1)
+		num_threads(32)
 	{
 		tid = omp_get_thread_num();
 		if (tid == 0)
@@ -86,6 +87,8 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 			printf("Number of threads = %d\n", nthreads);
 		}
 		printf("Thread %d starting...\n",tid);
+		SHA256_CTX sha256;
+		BN_CTX * bnCtx = BN_CTX_new();
 
 		#pragma omp for schedule(static)
 		for(i = 0; i < num_tags; i++) {
@@ -93,7 +96,6 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 			// s are random salts.
 	//		printf ("Thread %d: current i = %d\n", tid, i);
 
-			BN_CTX * bnCtx = BN_CTX_new();
 
 			byte ir[48];
 			memcpy(ir,_i,32);
@@ -103,36 +105,13 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 			SHA256_Update(&sha256,ir,48);
 			SHA256_Final(_m[i],&sha256); // m = H(i,r)
 			
-			//output m = H(i,r);
-			//DEBUG
-			BIGNUM * bn_H_i_r= BN_new();
-			BN_bin2bn(_m[i],32,bn_H_i_r);
-			BIO_puts (out, "\nH(i,r) = ");
-			BN_print (out, bn_H_i_r); 
 
-
-			byte ts[20]; // 4 + 16
-			memcpy(ts,_t[i%num_times],4);
-			memcpy(ts+4,_s[i],16);
-			//SHA256_Update(&sha256,ts,0);
+		//	byte ts[20]; // 4 + 16
+			memcpy(ts[i],_t[i%num_times],4);
+			memcpy(ts[i]+4,_s[i],16);
 			SHA256_Init(&sha256);
-			SHA256_Update(&sha256,ts,20);
+			SHA256_Update(&sha256,ts[i],20);
 			SHA256_Final(_m[i]+32,&sha256); // _m[i] = (H(i,r),H(t,s))
-			//SHA256_Final(_m[i],&sha256); // _m[i] = (H(i,r),H(t,s))
-
-			printf ("Client::ts = \n");
-			for (int j = 0; j < 20; ++j)
-				printf ("%d", ts[j]);
-			printf ("\n");
-
-
-			//output m = (H(i,r), H(t,s));
-			//DEBUG
-			BIGNUM* bn_m= BN_new();
-			BN_bin2bn(_m[i],64,bn_m);
-			BIO_puts (out, "\n(H(i,r), H(t,s) = ");
-			BN_print (out, bn_m); 
-
 
 	//		printf ("Thread %d HERE1: current i = %d\n", tid, i);
 			//  The value c = x^e H(m) is sent to the server
@@ -141,14 +120,9 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 			SHA256_Update(&sha256,_m[i],64);
 			SHA256_Final(H_m,&sha256);
 
-
-
 			BIGNUM * x = BN_new();
 			BN_rand_range(x,Server::get_n()); // generate random x less than n
 			// raise x^e
-
-			BIO_puts (out, "\nx = ");
-			BN_print (out, x); 
 
 			BIGNUM * x_pow_e = BN_new();
 			BN_mod_exp(x_pow_e,x,Server::get_e(),Server::get_n(),bnCtx);
@@ -156,10 +130,8 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 
 			//output x^e
 			//DEBUG
-			BIO_puts (out, "\nx ^ e = ");
-			BN_print (out, x_pow_e); 
-
-
+		//	BIO_puts (out, "\nx ^ e = ");
+		//	BN_print (out, x_pow_e); 
 
 			BIGNUM * bn_H_m = BN_new();
 			BN_bin2bn(H_m,32,bn_H_m);
@@ -167,8 +139,8 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 
 			//output h(m)
 			//DEBUG
-			BIO_puts (out, "\nh(m) = ");
-			BN_print (out, bn_H_m); 
+	//		BIO_puts (out, "\nh(m) = ");
+	//		BN_print (out, bn_H_m); 
 
 
 			BIGNUM * c = BN_new();
@@ -176,32 +148,23 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 
 			//output x^e
 			//DEBUG
-			BIO_puts (out, "\nc = ");
-			BN_print (out, c); 
+	//		BIO_puts (out, "\nc = ");
+	//		BN_print (out, c); 
 
 
 			BIGNUM * gamma = Server::compute_gamma(c,bnCtx);
-		//	BN_div(_sigma[i],NULL,gamma,x,bnCtx);
 			BIGNUM * x_inverse = BN_new();
 			BN_mod_inverse(x_inverse, x, Server::get_n(), bnCtx);
 			BN_mod_mul(_sigma[i], x_inverse, gamma, Server::get_n(), bnCtx);
 
-			//output gamma
-			//DEBUG
-			BIO_puts (out, "\ngamma = ");
-			BN_print (out, gamma); 
 
 			//output c^d
-			BIGNUM * c_pow_d = BN_new();
-			BN_mod_exp(c_pow_d,c,Server::get_d(),Server::get_n(),bnCtx);
-			BIO_puts (out, "\nc^d = ");
-			BN_print (out, c_pow_d); 
+		//	BIGNUM * c_pow_d = BN_new();
+		//	BN_mod_exp(c_pow_d,c,Server::get_d(),Server::get_n(),bnCtx);
+		//	BIO_puts (out, "\nc^d = ");
+		//	BN_print (out, c_pow_d); 
 			
 
-			//output sigma
-			//DEBUG
-			BIO_puts (out, "\nsigma = ");
-			BN_print (out, _sigma[i]); 
 		}
 	}
 	double end = omp_get_wtime( );
@@ -211,25 +174,51 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 void Client::reveal(float percentage) {
 	int tokens_spent = num_tags * percentage;
 	//for debug
-	tokens_spent = 2;
+//	tokens_spent = 2;
 	printf ("Client::revealing a percentage of %.2g tickets \n", percentage);
 	int i;
 	for (i = 0; i < tokens_spent; ++i) {
 		//now spend all the tokens
-		/*
 		if (Server::verify_token (_m[i], _t[0], _s[i], _sigma[i])) {
-			printf ("token# %d verified\n", i);
+//			printf ("token# %d verified\n", i);
 		} else {
 			printf ("token# %d not verified\n", i);
+
+			//output m = H(i,r);
+			//DEBUG
+			BIGNUM * bn_H_i_r= BN_new();
+			BN_bin2bn(_m[i],32,bn_H_i_r);
+			BIO_puts (out, "\nH(i,r) = ");
+			BN_print (out, bn_H_i_r); 
+
+			//output m = (H(i,r), H(t,s));
+			//DEBUG
+			BIGNUM* bn_m= BN_new();
+			BN_bin2bn(_m[i],64,bn_m);
+			BIO_puts (out, "\n(H(i,r), H(t,s) = ");
+			BN_print (out, bn_m); 
+
+			//output sigma
+			//DEBUG
+			BIO_puts (out, "\nsigma = ");
+			BN_print (out, _sigma[i]); 
+
+			printf ("Client::ts = \n");
+			for (int j = 0; j < 20; ++j) {
+				printf ("%d", ts[i][j]);
+			}
+			printf ("\n");
+
 		}
-		*/
 
 		/*test of collision*/
+		/*
 		if (Server::verify_token (_m[0], _t[0], _s[0], _sigma[0])) {
 			printf ("token# %d verified\n", i);
 		} else {
 			printf ("token# %d not verified\n", i);
 		}
+		*/
 
 	}
 }
