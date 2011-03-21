@@ -69,9 +69,11 @@ BIGNUM * Server::get_d() {
 
 bool used (byte * _m1, byte * _m2) {
 	for (int i = 0; i < 64; ++i) {
+	//	printf ("_m1[%d] = %d , _m2[%d] = %d \n", i, _m1[i], i, _m2[i]);
 		if (_m1[i] != _m2[i])
 			return false;
 	}
+	return true;
 }
 
 

@@ -44,7 +44,7 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 	num_tags = num_times * tags_each_reveal;
 	
 	//debug 
-	num_tags = 1;
+	num_tags = 2;
 
 	// Initialize all tag data
 	_m = new byte*[num_tags];
@@ -211,16 +211,26 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 void Client::reveal(float percentage) {
 	int tokens_spent = num_tags * percentage;
 	//for debug
-	tokens_spent = 1;
+	tokens_spent = 2;
 	printf ("Client::revealing a percentage of %.2g tickets \n", percentage);
 	int i;
 	for (i = 0; i < tokens_spent; ++i) {
 		//now spend all the tokens
+		/*
 		if (Server::verify_token (_m[i], _t[0], _s[i], _sigma[i])) {
 			printf ("token# %d verified\n", i);
 		} else {
 			printf ("token# %d not verified\n", i);
 		}
+		*/
+
+		/*test of collision*/
+		if (Server::verify_token (_m[0], _t[0], _s[0], _sigma[0])) {
+			printf ("token# %d verified\n", i);
+		} else {
+			printf ("token# %d not verified\n", i);
+		}
+
 	}
 }
 
