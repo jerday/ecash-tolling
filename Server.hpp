@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <openssl/rsa.h>
 #include <openssl/engine.h>
+#include <stdint.h>
 #include <iostream>
 using namespace std;
 
@@ -20,6 +21,7 @@ public:
 private:
 	static RSA * rsa;
 	static SHA256_CTX sha256;
+	static BIO* out;
 
 	static byte ** spent_m;
 	static int spent_num;

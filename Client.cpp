@@ -78,7 +78,7 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 	int i = 0;
 
 	#pragma omp parallel default(shared) private(i) \
-		num_threads(32)
+		num_threads(1)
 	{
 		tid = omp_get_thread_num();
 		if (tid == 0)
@@ -101,19 +101,43 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 			memcpy(ir+32,_r[i],16);
 			SHA256_Update(&sha256,ir,48);
 			SHA256_Final(_m[i],&sha256); // m = H(i,r)
-			PN_push
+			
+			//output m = H(i,r);
+			//DEBUG
+			BIGNUM * bn_H_i_r= BN_new();
+			BN_bin2bn(_m[i],32,bn_H_i_r);
+			BIO_puts (out, "\nH(i,r) = ");
+			BN_print (out, bn_H_i_r); 
+
 
 			byte ts[20]; // 4 + 16
 			memcpy(ts,_t[i%num_times],4);
-			memcpy(ts+2,_s[i],16);
+			memcpy(ts+4,_s[i],16);
 			SHA256_Update(&sha256,ts,48);
 			SHA256_Final(_m[i]+32,&sha256); // _m[i] = (H(i,r),H(t,s))
+			//SHA256_Final(_m[i],&sha256); // _m[i] = (H(i,r),H(t,s))
+
+			printf ("Client::ts = \n");
+			for (int j = 0; j < 20; ++j)
+				printf ("%d", ts[j]);
+			printf ("\n");
+
+
+			//output m = (H(i,r), H(t,s));
+			//DEBUG
+			BIGNUM* bn_m= BN_new();
+			BN_bin2bn(_m[i],64,bn_m);
+			BIO_puts (out, "\n(H(i,r), H(t,s) = ");
+			BN_print (out, bn_m); 
+
 
 	//		printf ("Thread %d HERE1: current i = %d\n", tid, i);
 			//  The value c = x^e H(m) is sent to the server
 			byte H_m[32];
 			SHA256_Update(&sha256,_m[i],64);
 			SHA256_Final(H_m,&sha256);
+
+
 
 			BIGNUM * x = BN_new();
 			BN_rand_range(x,Server::get_n()); // generate random x less than n
@@ -123,15 +147,45 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 			BN_mod_exp(x_pow_e,x,Server::get_e(),Server::get_n(),bnCtx);
 	//		printf ("Thread %d HERE2: current i = %d\n", tid, i);
 
+			//output x^e
+			//DEBUG
+			BIO_puts (out, "\nx ^ e = ");
+			BN_print (out, x_pow_e); 
+
+
+
 			BIGNUM * bn_H_m = BN_new();
 			BN_bin2bn(H_m,32,bn_H_m);
+
+
+			//output h(m)
+			//DEBUG
+			BIO_puts (out, "\nh(m) = ");
+			BN_print (out, bn_H_m); 
 
 
 			BIGNUM * c = BN_new();
 			BN_mod_mul(c,bn_H_m,x_pow_e,Server::get_n(),bnCtx);
 
+			//output x^e
+			//DEBUG
+			BIO_puts (out, "\nc = ");
+			BN_print (out, c); 
+
+
 			BIGNUM * gamma = Server::compute_gamma(c,bnCtx);
 			BN_div(_sigma[i],NULL,gamma,x,bnCtx);
+
+
+			//output gamma
+			//DEBUG
+			BIO_puts (out, "\ngamma = ");
+			BN_print (out, gamma); 
+
+			//output sigma
+			//DEBUG
+			BIO_puts (out, "\nsigma = ");
+			BN_print (out, _sigma[i]); 
 		}
 	}
 	double end = omp_get_wtime( );
