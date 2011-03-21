@@ -23,6 +23,13 @@ void Server::key_generation() {
 BIGNUM * Server::compute_gamma(BIGNUM * c,BN_CTX * bnCtx) {
 	BIGNUM * gamma = BN_new();
 	BN_mod_exp(gamma,c,rsa->d,rsa->n,bnCtx); // slowest
+
+	BIO_puts (out, "\nc = ");
+	BN_print (out, c);
+
+	BIO_puts (out, "\ngamma = ");
+	BN_print (out, gamma);
+
 	//RSA_eay_mod_exp(gamma, c, rsa, bnCtx);  // better, requires copy paste function
 	//BN_MONT_CTX * montCtx = BN_MONT_CTX_new();
 	//BN_mod_exp_mont(gamma,c,rsa->d,rsa->n,bnCtx,montCtx);
@@ -53,6 +60,11 @@ BIGNUM * Server::get_n() {
 
 BIGNUM * Server::get_e() {
 	return rsa->e;
+}
+
+//for debug
+BIGNUM * Server::get_d() {
+	return rsa->d;
 }
 
 bool used (byte * _m1, byte * _m2) {

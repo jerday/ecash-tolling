@@ -181,13 +181,22 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 
 
 			BIGNUM * gamma = Server::compute_gamma(c,bnCtx);
-			BN_div(_sigma[i],NULL,gamma,x,bnCtx);
-
+		//	BN_div(_sigma[i],NULL,gamma,x,bnCtx);
+			BIGNUM * x_inverse = BN_new();
+			BN_mod_inverse(x_inverse, x, Server::get_n(), bnCtx);
+			BN_mod_mul(_sigma[i], x_inverse, gamma, Server::get_n(), bnCtx);
 
 			//output gamma
 			//DEBUG
 			BIO_puts (out, "\ngamma = ");
 			BN_print (out, gamma); 
+
+			//output c^d
+			BIGNUM * c_pow_d = BN_new();
+			BN_mod_exp(c_pow_d,c,Server::get_d(),Server::get_n(),bnCtx);
+			BIO_puts (out, "\nc^d = ");
+			BN_print (out, c_pow_d); 
+			
 
 			//output sigma
 			//DEBUG

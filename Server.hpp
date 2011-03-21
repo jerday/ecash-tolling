@@ -18,6 +18,7 @@ public:
 	static BIGNUM * compute_gamma(BIGNUM * c,BN_CTX * bnCtx);
 	static BIGNUM * get_n();
 	static BIGNUM * get_e();
+	static BIGNUM * get_d();
 private:
 	static RSA * rsa;
 	static SHA256_CTX sha256;
