@@ -115,10 +115,19 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 
 	//		printf ("Thread %d HERE1: current i = %d\n", tid, i);
 			//  The value c = x^e H(m) is sent to the server
-			byte H_m[32];
+			byte H_m[33];
 			SHA256_Init(&sha256);
 			SHA256_Update(&sha256,_m[i],64);
 			SHA256_Final(H_m,&sha256);
+
+			byte H_mi[128];
+
+			for (int k = 0; k < 4; k++) {
+                            H_m[32] = k;
+			    SHA256_Init(&sha256);
+			    SHA256_Update(&sha256,H_m,33);
+			    SHA256_Final(H_mi+32*k,&sha256);
+                        }
 
 			BIGNUM * x = BN_new();
 			BN_rand_range(x,Server::get_n()); // generate random x less than n
@@ -134,7 +143,7 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 		//	BN_print (out, x_pow_e); 
 
 			BIGNUM * bn_H_m = BN_new();
-			BN_bin2bn(H_m,32,bn_H_m);
+			BN_bin2bn(H_mi,128,bn_H_m);
 
 
 			//output h(m)
