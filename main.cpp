@@ -4,11 +4,11 @@
 
 int main(int argc, char** argv)
 {
-	Server::key_generation();
-	Server::registration();
-	Client c = Client();
-	c.registration(1,1,1);
-	c.reveal(1.0);
-	return 0;
+    Server::key_generation();
+    Server::registration();
+    Client c = Client();
+    c.registration(1,1,4);
+    c.reveal(0.5);
+    return 0;
 }
 
