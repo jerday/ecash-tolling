@@ -20,6 +20,7 @@ Client::Client() {
     } else {
         printf ("debug file established\n");
     }
+    cc_bytes = 0;
 
     //BIO_set_fp(out,stdout,BIO_NOCLOSE);
     //the line above is to redirect the output stream to the screen
@@ -159,8 +160,9 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 
 
     //	printf ("Thread %d HERE4: current i = %d\n", tid, i);
-
+	    cc_bytes += 1024 / 8;
             BIGNUM * gamma = Server::compute_gamma(c,bnCtx);
+	    cc_bytes += 1024 / 8;
             BIGNUM * x_inverse = BN_new();
             BN_mod_inverse(x_inverse, x, Server::get_n(), bnCtx);
             BN_mod_mul(_sigma[i], x_inverse, gamma, Server::get_n(), bnCtx);
@@ -190,6 +192,7 @@ void Client::reveal(float percentage) {
     /*test of spending*/
     for (i = 0; i < tokens_spent; ++i) {
         //now spend all the tokens
+	    cc_bytes += 1024 / 8;
         if (Server::verify_token (_m[i], _t[0], _s[i], _sigma[i])) {
 //            printf ("token# %d verified\n", i);
         } else {

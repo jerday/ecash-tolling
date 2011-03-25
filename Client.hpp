@@ -15,6 +15,7 @@ public:
     void registration(double revealed_per_interval, int tags_each_reveal, int period_length);
     void reveal(float percentage);
     void payment();
+    int cc_bytes; //communication cost in bytes
 protected:
     int num_tags;
     byte _i[32]; // unique identifier
