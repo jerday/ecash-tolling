@@ -216,7 +216,7 @@ BIGNUM * Server::compute_gamma(BIGNUM * c,BN_CTX * bnCtx) {
 
 void Server::registration() {
     //spent_m = new byte*[24 * 60];
-	spent_m = new int [24 * 60 * 10];
+	spent_m = new int [24 * 60 * 200];
 	/*
     for (int i = 0; i < 24 * 60; ++i) {
         spent_m[i] = new byte [64];
@@ -367,5 +367,8 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma) {
     }
     spent_m[spent_num++] = h_m_int;
 //    printf ("Server::verifying token3\n");
+    if (spent_num % 1000 == 0) {
+	    printf ("spent_num = %d\n", spent_num);
+    }
     return true;
 }
