@@ -88,7 +88,7 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
             nthreads = omp_get_num_threads();
             printf("Number of threads = %d\n", nthreads);
         } 
-        printf("Thread %d starting...\n",tid);
+    //    printf("Thread %d starting...\n",tid);
         SHA256_CTX sha256;
         BN_CTX * bnCtx = BN_CTX_new();
 
