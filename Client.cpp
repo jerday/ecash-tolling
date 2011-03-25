@@ -179,7 +179,7 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
         }
     }
     double end = omp_get_wtime( );
-    printf ("verification takes %.16g seconds\n", end - start);
+    printf ("registration takes %.16g seconds\n", end - start);
 }
 
 void Client::reveal(float percentage) {
