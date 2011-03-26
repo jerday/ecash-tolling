@@ -388,7 +388,10 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
 
 
     /* The token has now been verified. Add it to the database */
-    string query = "INSERT INTO spent_tags VALUES(...";
-
+	sqlite3_stmt * stmt;
+    const char* tail;
+    string query = "INSERT INTO spent_tags VALUES(?,?)";
+    sqlite3_prepare(db,query.c_str(),query.length(),&stmt,&tail);
+    sqlite3_bind_int64(stmt,0,0); // todo
     return true;
 }
