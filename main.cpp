@@ -9,7 +9,7 @@ int main(int argc, char** argv)
     Client c = Client();
     //for (int i = 1; i < 32; i *= 2)
    // {
-    	c.registration(1,1,2);
+    	c.registration(1,1,128);
     	c.reveal(0.5);
 	printf ("Total communication cost = %d bytes\n", c.cc_bytes);
     //}
