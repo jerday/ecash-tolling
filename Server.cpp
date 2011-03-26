@@ -14,7 +14,20 @@ int * Server::spent_m;
 int Server::spent_num;
 BIO* Server::out = NULL;
 sqlite3 * Server::db;
+sqlite3 * Server::ds_db;
 int Server::bytes_stored;
+
+
+void sql_stmt(const char* stmt) {
+  char *errmsg;
+  int   ret;
+
+  ret = sqlite3_exec(Server::db, stmt, 0, 0, &errmsg);
+
+  if(ret != SQLITE_OK) {
+    printf("Error in statement: %s [%s].\n", stmt, errmsg);
+  }
+}
 
 static int RSA_eay_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa, BN_CTX *ctx)
 	{
@@ -159,7 +172,7 @@ static int RSA_eay_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa, BN_CTX *ctx)
 
 			BIGNUM local_d;
 			BIGNUM *d = NULL;
-		
+
 			if (!(rsa->flags & RSA_FLAG_NO_CONSTTIME))
 				{
 				d = &local_d;
@@ -247,16 +260,34 @@ void Server::registration() {
     }
 
     /* Create the database of spent tags */
-    string filename = "test";
-    if(SQLITE_OK == sqlite3_open(filename.c_str(),&db)) {
-    	string create = "CREATE TABLE spent_tags ( m1 INTEGER )";
-    	sqlite3_stmt * stmt;
-        const char* tail;
-    	sqlite3_prepare(db,create.c_str(),create.length(),&stmt,&tail);
-    	sqlite3_step(stmt);
-    } else {
-    	cerr << "Unable to open database" << endl;
+
+    sqlite3_open("ecash-tolling.db", &db);
+    if(db == 0) {
+    	printf("\nCould not open database: ecash-tolling.db.");
     }
+    string create = "CREATE TABLE spent_tags ( m1 INTEGER PRIMARY KEY ASC)";
+    sqlite3_stmt * stmt;
+    int rc = sqlite3_prepare(db,create.c_str(),-1,&stmt,0);
+	if (rc != SQLITE_OK) {
+	    printf("\nCould not prepare statement. %d", rc);
+	}
+	if (sqlite3_step(stmt) != SQLITE_DONE) {
+	    printf("\nCould not step (execute) stmt.\n");
+	}
+
+	/*Create the database for double spending tags */
+    sqlite3_open("double_spending.db", &ds_db);
+    if(db == 0) {
+    	printf("\nCould not open database: double_spending.db.");
+    }
+    create = "CREATE TABLE double_spent_tags ( m1 INTEGER PRIMARY KEY ASC)";
+    rc = sqlite3_prepare(ds_db,create.c_str(),-1,&stmt,0);
+	if (rc != SQLITE_OK) {
+	    printf("\nCould not prepare statement. %d", rc);
+	}
+	if (sqlite3_step(stmt) != SQLITE_DONE) {
+	    printf("\nCould not step (execute) stmt.\n");
+	}
 }
 
 BIGNUM * Server::get_n() {
@@ -398,15 +429,48 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
     }
     */
 
-	bytes_stored += 64 / 8;
-    /* The token has now been verified. Add the first 64 bits of H_mi to the database */
-	sqlite3_stmt * stmt;
-    const char* tail;
-    string query = "INSERT INTO spent_tags VALUES(?)";
-    int64_t i1 = 5;
-    sqlite3_prepare(db,query.c_str(),query.length(),&stmt,&tail);
-    sqlite3_bind_int64(stmt,1,byte_to_int64(H_mi));
-    sqlite3_step(stmt);
-    sqlite3_reset(stmt);
+/* first check for double spending
+   if the current token has been spent,
+   	then add it to "double_db",
+   else add it to "db"
+   */
+    int64_t i1 = byte_to_int64(H_mi);
+    printf ("i1 = %d %d\n", *((int*) (&i1)), *((int*)(&i1) + 1));
+
+	sqlite3_stmt * ds_stmt; //double spending check statement
+    	sqlite3_prepare_v2(db, "select m1 from spent_tags where m1 = (?)",-1,&ds_stmt,0);
+    	sqlite3_bind_int64(ds_stmt,1,i1);
+	int res = sqlite3_step (ds_stmt);
+	printf ("res = %d\n", res);
+	printf ("SQLITE_DONE = %d\n", SQLITE_DONE);
+	printf ("SQLITE_ROW = %d\n", SQLITE_ROW);
+    	if (res == SQLITE_DONE) {//no record is the same
+		bytes_stored += 64 / 8;
+    		/* The token has now been verified. Add the first 64 bits of H_mi to the database */
+		sqlite3_stmt * stmt;
+    		string query = "INSERT INTO spent_tags VALUES(?)";
+    		sqlite3_prepare_v2(db,query.c_str(),-1,&stmt,0);
+    		sqlite3_bind_int64(stmt,1,i1);
+    		sqlite3_step(stmt);
+   		if (bytes_stored % 800 == 0) {
+		    printf ("%d tokens verified\n", bytes_stored / 8);
+		}
+	} else if (res == SQLITE_ROW) {
+		//there is already a record,
+		//so it's double spending
+		//we add such token to a double spending database
+		printf ("SERVER: Double spending detected!\n");
+		sqlite3_stmt * stmt;
+    		string query = "INSERT INTO double_spent_tags VALUES(?)";
+    		sqlite3_prepare_v2(ds_db,query.c_str(),-1,&stmt,0);
+    		sqlite3_bind_int64(stmt,1,i1);
+    		sqlite3_step(stmt);
+		return false;
+	}
+
     return true;
+}
+
+void Server::payment() {
+	sqlite3_close(db);
 }
