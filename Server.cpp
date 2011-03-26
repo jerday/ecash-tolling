@@ -395,12 +395,13 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
     }
 
 
-    /* The token has now been verified. Add it to the database */
+    /* The token has now been verified. Add the first 64 bits of H_mi to the database */
 	sqlite3_stmt * stmt;
     const char* tail;
     string query = "INSERT INTO spent_tags VALUES(?)";
     int64_t i1 = 5;
     sqlite3_prepare(db,query.c_str(),query.length(),&stmt,&tail);
     sqlite3_bind_int64(stmt,0,byte_to_int64(H_mi));
+    sqlite3_step(stmt);
     return true;
 }
