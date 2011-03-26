@@ -185,6 +185,14 @@ int byte_to_int (byte* H_mi) {
 	return ans;
 }
 
+int64_t byte_to_int64(byte* b) {
+	int64_t ans = 0;
+	for (int i = 0; i < 8; ++i) {
+		ans = (ans << 8) + b[i];
+	}
+	return ans;
+}
+
 void Server::key_generation() {
     // Server selects an RSA modulus N = pq and determines e, d such
     // that ed ≡ 1 (mod phi(N)). The public key is (e,N), the private
@@ -239,7 +247,7 @@ void Server::registration() {
     /* Create the database of spent tags */
     string filename = "test";
     if(SQLITE_OK == sqlite3_open(filename.c_str(),&db)) {
-    	string create = "CREATE TABLE spent_tags ( m1 INTEGER, m2 INTEGER )";
+    	string create = "CREATE TABLE spent_tags ( m1 INTEGER )";
     	sqlite3_stmt * stmt;
         const char* tail;
     	sqlite3_prepare(db,create.c_str(),create.length(),&stmt,&tail);
@@ -390,8 +398,9 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
     /* The token has now been verified. Add it to the database */
 	sqlite3_stmt * stmt;
     const char* tail;
-    string query = "INSERT INTO spent_tags VALUES(?,?)";
+    string query = "INSERT INTO spent_tags VALUES(?)";
+    int64_t i1 = 5;
     sqlite3_prepare(db,query.c_str(),query.length(),&stmt,&tail);
-    sqlite3_bind_int64(stmt,0,0); // todo
+    sqlite3_bind_int64(stmt,0,byte_to_int64(H_mi));
     return true;
 }
