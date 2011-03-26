@@ -20,6 +20,7 @@ protected:
     int num_tags;
     byte _i[32]; // unique identifier
     byte ** _m; // array of (H(i,r),H(t,s))
+    bool *used; // a tag illustrating weather a token has been used or not
 
     int ** _t; // array of times
 

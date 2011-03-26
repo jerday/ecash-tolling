@@ -56,12 +56,14 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
     _r = new BIGNUM*[num_tags];
     _s = new BIGNUM*[num_tags];
     _sigma = new BIGNUM*[num_tags];
+    used = new bool [num_tags];
 
     for(int i = 0; i < num_tags; i++) {
         _m[i] = new byte[64];
         _r[i] = BN_new();
         _s[i] = BN_new();
         _sigma[i] = BN_new();
+	used[i] = false;
         BN_rand(_r[i],128,-1,-1);
         BN_rand(_s[i],128,-1,-1);
     }
@@ -193,6 +195,7 @@ void Client::reveal(float percentage) {
     for (i = 0; i < tokens_spent; ++i) {
         //now spend all the tokens
 	    cc_bytes += 1024 / 8;
+	    used[i] = true;
         if (Server::verify_token (_m[i], _t[0], _s[i], _sigma[i])) {
 //            printf ("token# %d verified\n", i);
         } else {
@@ -239,5 +242,16 @@ void Client::reveal(float percentage) {
 }
 
 void Client::payment() {
-	Server::payment();
+    double start = omp_get_wtime( );
+	for (int i = 0; i < num_tags; ++i) {
+		if (used[i])
+			continue;
+        	if (Server::payment (_m[i], _t[0], _s[i], _sigma[i])) {
+			//successful payment
+		} else {
+			printf ("Server failed to receive token #%d \n", i);
+		}
+	}
+    double end = omp_get_wtime( );
+    printf ("payment takes %.16g seconds\n", end - start);
 }

@@ -16,7 +16,7 @@ BIO* Server::out = NULL;
 sqlite3 * Server::db;
 sqlite3 * Server::ds_db;
 int Server::bytes_stored;
-
+int Server::remain_token_num;
 
 void sql_stmt(const char* stmt) {
   char *errmsg;
@@ -218,36 +218,15 @@ void Server::key_generation() {
 
 BIGNUM * Server::compute_gamma(BIGNUM * c,BN_CTX * bnCtx) {
 	BIGNUM * gamma = BN_new();
-	//BN_mod_exp(gamma,c,rsa->d,rsa->n,bnCtx); // slowest
-//    BN_mod_exp(gamma,c,rsa->d,rsa->n,bnCtx); // slowest
-
-    //BIO_puts (out, "\nc = ");
-    //BN_print (out, c);
-
-    //BIO_puts (out, "\ngamma = ");
-    //BN_print (out, gamma);
-
-//<<<<<<< HEAD
 	RSA_eay_mod_exp(gamma, c, rsa, bnCtx);  // better, requires copy paste function
-//	BN_MONT_CTX * montCtx = BN_MONT_CTX_new();
-//	BN_mod_exp_mont(gamma,c,rsa->d,rsa->n,bnCtx,montCtx);
 	return gamma;
-//=======
-    //RSA_eay_mod_exp(gamma, c, rsa, bnCtx);  // better, requires copy paste function
-    //BN_MONT_CTX * montCtx = BN_MONT_CTX_new();
-    //BN_mod_exp_mont(gamma,c,rsa->d,rsa->n,bnCtx,montCtx);
- //   return gamma;
 }
 
 void Server::registration() {
-    //spent_m = new byte*[24 * 60];
-	spent_m = new int [24 * 60 * 200];
+
 	bytes_stored = 0;
-	/*
-    for (int i = 0; i < 24 * 60; ++i) {
-        spent_m[i] = new byte [64];
-    }
-    */
+	remain_token_num = 0;
+
     spent_num = 0;
 
     out = BIO_new_file ("server_debug.log", "w");
@@ -288,6 +267,7 @@ void Server::registration() {
 	if (sqlite3_step(stmt) != SQLITE_DONE) {
 	    printf("\nCould not step (execute) stmt.\n");
 	}
+
 }
 
 BIGNUM * Server::get_n() {
@@ -312,16 +292,12 @@ bool used (byte * _m1, byte * _m2) {
     return true;
 }
 
-
 bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
 {
-
-
     //now it is a naive solution, we simply use an array
     byte* _m = new byte [64];
     memcpy (_m, h, 32);
 
-//    printf ("Server::verifying token1\n");
     //compute m = (h, H(t,s))
     byte ts[20]; // 4 + 16
     memcpy(ts,t, 4);
@@ -331,24 +307,10 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
     SHA256_Update(&sha256,ts,20);
     SHA256_Final(_m + 32,&sha256); // _m[i] = (H(i,r),H(t,s))
 
-//    printf ("Server::verifying token2\n");
-
     //verifies that t is correct
     if (*t != 1) {
         printf ("Server: t not correct, should be 1, but now is %d\n", *t);
     }
-
-
-/*
-    //verifies that m has not been used
-    for (int i = 0; i < spent_num; ++i) {
-        if (used(_m, spent_m[i])) {
-            printf ("Server: This ticket has been used\n");
-            return false;
-        }
-    }
-    spent_m[spent_num++] = _m;
-    */
 
     //check signature: H(m) = sigma^e
     byte H_m[33];
@@ -435,15 +397,15 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
    else add it to "db"
    */
     int64_t i1 = byte_to_int64(H_mi);
-    printf ("i1 = %d %d\n", *((int*) (&i1)), *((int*)(&i1) + 1));
+    //printf ("i1 = %d %d\n", *((int*) (&i1)), *((int*)(&i1) + 1));
 
 	sqlite3_stmt * ds_stmt; //double spending check statement
     	sqlite3_prepare_v2(db, "select m1 from spent_tags where m1 = (?)",-1,&ds_stmt,0);
     	sqlite3_bind_int64(ds_stmt,1,i1);
 	int res = sqlite3_step (ds_stmt);
-	printf ("res = %d\n", res);
-	printf ("SQLITE_DONE = %d\n", SQLITE_DONE);
-	printf ("SQLITE_ROW = %d\n", SQLITE_ROW);
+//	printf ("res = %d\n", res);
+//	printf ("SQLITE_DONE = %d\n", SQLITE_DONE);
+//	printf ("SQLITE_ROW = %d\n", SQLITE_ROW);
     	if (res == SQLITE_DONE) {//no record is the same
 		bytes_stored += 64 / 8;
     		/* The token has now been verified. Add the first 64 bits of H_mi to the database */
@@ -452,7 +414,7 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
     		sqlite3_prepare_v2(db,query.c_str(),-1,&stmt,0);
     		sqlite3_bind_int64(stmt,1,i1);
     		sqlite3_step(stmt);
-   		if (bytes_stored % 800 == 0) {
+   		if (bytes_stored % 8000 == 0) {
 		    printf ("%d tokens verified\n", bytes_stored / 8);
 		}
 	} else if (res == SQLITE_ROW) {
@@ -471,6 +433,16 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
     return true;
 }
 
-void Server::payment() {
-	sqlite3_close(db);
+bool Server::payment(byte *h, int *t, BIGNUM * s, BIGNUM * sigma) {
+	remain_token_num++;
+	if (verify_token(h, t, s, sigma)) {
+		return true;
+	} else {
+		printf ("PAYMENT: Token invalid!\n");
+		return false;
+	}
+	if (remain_token_num % 10000 == 0) {
+		printf ("SERVER:: %d tokens payed\n", remain_token_num);
+	}
+//	sqlite3_close(db);
 }
