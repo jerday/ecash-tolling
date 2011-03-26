@@ -3,6 +3,8 @@
 #include <string.h>
 #include "stdlib.h"
 #include <stdint.h>
+#include <sqlite3.h>
+
 
 using namespace std;
 
@@ -11,6 +13,7 @@ SHA256_CTX Server::sha256;
 int * Server::spent_m;
 int Server::spent_num;
 BIO* Server::out = NULL;
+sqlite3 * Server::db;
 
 static int RSA_eay_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa, BN_CTX *ctx)
 	{
@@ -233,6 +236,17 @@ void Server::registration() {
         printf ("debug file established\n");
     }
 
+    /* Create the database of spent tags */
+    string filename = "test";
+    if(SQLITE_OK == sqlite3_open(filename.c_str(),&db)) {
+    	string create = "CREATE TABLE spent_tags ( m1 INTEGER, m2 INTEGER )";
+    	sqlite3_stmt * stmt;
+        const char* tail;
+    	sqlite3_prepare(db,create.c_str(),create.length(),&stmt,&tail);
+    	sqlite3_step(stmt);
+    } else {
+    	cerr << "Unable to open database" << endl;
+    }
 }
 
 BIGNUM * Server::get_n() {
@@ -258,7 +272,8 @@ bool used (byte * _m1, byte * _m2) {
 }
 
 
-bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma) {
+bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
+{
 
 
     //now it is a naive solution, we simply use an array
@@ -370,5 +385,10 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma) {
     if (spent_num % 10000 == 0) {
 	    printf ("spent_num = %d\n", spent_num);
     }
+
+
+    /* The token has now been verified. Add it to the database */
+    string query = "INSERT INTO spent_tags VALUES(...";
+
     return true;
 }
