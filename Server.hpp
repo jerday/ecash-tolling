@@ -17,15 +17,17 @@ public:
     static void key_generation();
     static void registration();
     static bool verify_token(byte *h, int *t, BIGNUM * s, BIGNUM * sigma);
+    static void payment();
     static BIGNUM * compute_gamma(BIGNUM * c,BN_CTX * bnCtx);
     static BIGNUM * get_n();
     static BIGNUM * get_e();
     static BIGNUM * get_d();
+    static sqlite3* db;
+
 private:
     static RSA * rsa;
     static SHA256_CTX sha256;
     static BIO* out;
-    static sqlite3* db;
 
     static int * spent_m;
     static int spent_num;

@@ -15,6 +15,17 @@ int Server::spent_num;
 BIO* Server::out = NULL;
 sqlite3 * Server::db;
 
+void sql_stmt(const char* stmt) {
+  char *errmsg;
+  int   ret;
+
+  ret = sqlite3_exec(Server::db, stmt, 0, 0, &errmsg);
+
+  if(ret != SQLITE_OK) {
+    printf("Error in statement: %s [%s].\n", stmt, errmsg);
+  }
+}
+
 static int RSA_eay_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa, BN_CTX *ctx)
 	{
 	BIGNUM *r1,*m1,*vrfy;
@@ -158,7 +169,7 @@ static int RSA_eay_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa, BN_CTX *ctx)
 
 			BIGNUM local_d;
 			BIGNUM *d = NULL;
-		
+
 			if (!(rsa->flags & RSA_FLAG_NO_CONSTTIME))
 				{
 				d = &local_d;
@@ -245,16 +256,20 @@ void Server::registration() {
     }
 
     /* Create the database of spent tags */
-    string filename = "test";
-    if(SQLITE_OK == sqlite3_open(filename.c_str(),&db)) {
-    	string create = "CREATE TABLE spent_tags ( m1 INTEGER )";
-    	sqlite3_stmt * stmt;
-        const char* tail;
-    	sqlite3_prepare(db,create.c_str(),create.length(),&stmt,&tail);
-    	sqlite3_step(stmt);
-    } else {
-    	cerr << "Unable to open database" << endl;
+
+    sqlite3_open("ecash-tolling.db", &db);
+    if(db == 0) {
+    	printf("\nCould not open database.");
     }
+    string create = "CREATE TABLE spent_tags ( m1 INTEGER )";
+    sqlite3_stmt * stmt;
+    int rc = sqlite3_prepare(db,create.c_str(),-1,&stmt,0);
+	if (rc != SQLITE_OK) {
+	    printf("\nCould not prepare statement. %d", rc);
+	}
+	if (sqlite3_step(stmt) != SQLITE_DONE) {
+	    printf("\nCould not step (execute) stmt.\n");
+	}
 }
 
 BIGNUM * Server::get_n() {
@@ -397,11 +412,14 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
 
     /* The token has now been verified. Add the first 64 bits of H_mi to the database */
 	sqlite3_stmt * stmt;
-    const char* tail;
     string query = "INSERT INTO spent_tags VALUES(?)";
-    int64_t i1 = 5;
-    sqlite3_prepare(db,query.c_str(),query.length(),&stmt,&tail);
-    sqlite3_bind_int64(stmt,0,byte_to_int64(H_mi));
+    int64_t i1 = byte_to_int64(H_mi);
+    sqlite3_prepare(db,query.c_str(),-1,&stmt,0);
+    sqlite3_bind_int(stmt,1,i1);
     sqlite3_step(stmt);
     return true;
+}
+
+void Server::payment() {
+	sqlite3_close(db);
 }

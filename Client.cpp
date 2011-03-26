@@ -81,14 +81,14 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 
 
     #pragma omp parallel default(shared) private(i) \
-        num_threads(32)
+        num_threads(1)
     {
         int tid = omp_get_thread_num();
         if (tid == 0)
         {
             nthreads = omp_get_num_threads();
             printf("Number of threads = %d\n", nthreads);
-        } 
+        }
     //    printf("Thread %d starting...\n",tid);
         SHA256_CTX sha256;
         BN_CTX * bnCtx = BN_CTX_new();
@@ -239,4 +239,5 @@ void Client::reveal(float percentage) {
 }
 
 void Client::payment() {
+	Server::payment();
 }
