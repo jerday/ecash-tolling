@@ -6,6 +6,8 @@
 #include <openssl/engine.h>
 #include <stdint.h>
 #include <iostream>
+#include <sqlite3.h>
+
 using namespace std;
 
 typedef uint8_t byte;
@@ -23,6 +25,7 @@ private:
     static RSA * rsa;
     static SHA256_CTX sha256;
     static BIO* out;
+    static sqlite3* db;
 
     static int * spent_m;
     static int spent_num;
