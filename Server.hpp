@@ -21,11 +21,12 @@ public:
     static BIGNUM * get_n();
     static BIGNUM * get_e();
     static BIGNUM * get_d();
+    static int bytes_stored;
+    static sqlite3* db;
 private:
     static RSA * rsa;
     static SHA256_CTX sha256;
     static BIO* out;
-    static sqlite3* db;
 
     static int * spent_m;
     static int spent_num;

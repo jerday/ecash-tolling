@@ -14,6 +14,7 @@ int * Server::spent_m;
 int Server::spent_num;
 BIO* Server::out = NULL;
 sqlite3 * Server::db;
+int Server::bytes_stored;
 
 static int RSA_eay_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa, BN_CTX *ctx)
 	{
@@ -228,6 +229,7 @@ BIGNUM * Server::compute_gamma(BIGNUM * c,BN_CTX * bnCtx) {
 void Server::registration() {
     //spent_m = new byte*[24 * 60];
 	spent_m = new int [24 * 60 * 200];
+	bytes_stored = 0;
 	/*
     for (int i = 0; i < 24 * 60; ++i) {
         spent_m[i] = new byte [64];
@@ -379,6 +381,7 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
         return false;
     }
 
+    /*
     int h_m_int = byte_to_int (H_mi);
     //printf ("h_m_int = %d\n", h_m_int);
     for (int i = 0; i < spent_num; ++i) {
@@ -393,15 +396,17 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
     if (spent_num % 10000 == 0) {
 	    printf ("spent_num = %d\n", spent_num);
     }
+    */
 
-
+	bytes_stored += 64 / 8;
     /* The token has now been verified. Add the first 64 bits of H_mi to the database */
 	sqlite3_stmt * stmt;
     const char* tail;
     string query = "INSERT INTO spent_tags VALUES(?)";
     int64_t i1 = 5;
     sqlite3_prepare(db,query.c_str(),query.length(),&stmt,&tail);
-    sqlite3_bind_int64(stmt,0,byte_to_int64(H_mi));
+    sqlite3_bind_int64(stmt,1,byte_to_int64(H_mi));
     sqlite3_step(stmt);
+    sqlite3_reset(stmt);
     return true;
 }
