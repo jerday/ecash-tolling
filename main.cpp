@@ -4,11 +4,9 @@
 
 int main(int argc, char** argv)
 {
-	for (int i = 1; i < 512; i *= 2) {
-		if (i != 1) {
+	for (int i = 512; i < 2048; i *= 2) {
 		  system ("rm double_spending.db");
 		  system ("rm ecash-tolling.db");
-		}
 		Server::key_generation();
   		  Server::registration();
   		  Client c = Client();

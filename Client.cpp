@@ -83,7 +83,7 @@ void Client::registration(double revealed_per_interval, int tags_each_reveal, in
 
 
     #pragma omp parallel default(shared) private(i) \
-        num_threads(1)
+        num_threads(32)
     {
         int tid = omp_get_thread_num();
         if (tid == 0)
