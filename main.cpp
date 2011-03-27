@@ -4,7 +4,11 @@
 
 int main(int argc, char** argv)
 {
-	for (int i = 1; i < 32; i *= 2) {
+	for (int i = 1; i < 512; i *= 2) {
+		if (i != 1) {
+		  system ("rm double_spending.db");
+		  system ("rm ecash-tolling.db");
+		}
 		Server::key_generation();
   		  Server::registration();
   		  Client c = Client();
@@ -15,6 +19,7 @@ int main(int argc, char** argv)
 //	printf ("Total communication cost = %d bytes\n", c.cc_bytes);
     //}
     //c.registration(0.2,1,30/*30*/);
+  		  //c.registration(0.2,1,i/*30*/);
   		  c.registration(0.2,1,i/*30*/);
 		    c.reveal(0.5);
  		   c.payment();
@@ -22,8 +27,6 @@ int main(int argc, char** argv)
 		    printf ("Stored Bytes = %d\n", Server::bytes_stored);
 		    sqlite3_close(Server::db);
   		  sqlite3_close(Server::ds_db);
-		  system ("rm double_spending.db");
-		  system ("rm ecash-tolling.db");
 	}
     
     return 0;
