@@ -27,14 +27,14 @@ Client::Client() {
 }
 
 Client::~Client() {
-    free(_i);
-    free(_m);
-    free(_t);
+    //free(_i);
+    //free(_m);
+    //free(_t);
 
-    BN_clear_free(*_r);
-    BN_clear_free(*_s);
-    BN_clear_free(*_sigma);
-    BIO_free (out);
+//    BN_clear_free(*_r);
+ //   BN_clear_free(*_s);
+  //  BN_clear_free(*_sigma);
+   // BIO_free (out);
 }
 
 /**
@@ -187,12 +187,12 @@ void Client::registration(int revealed_per_min, int tags_each_reveal, int period
 
 
         }
-        BN_clear_free(x);
-        BN_clear_free(x_pow_e);
-        BN_clear_free(bn_H_m);
-        BN_clear_free(c);
-        BN_clear_free(x_inverse);
-        BN_CTX_free(bnCtx);
+       // BN_clear_free(x);
+       // BN_clear_free(x_pow_e);
+       // BN_clear_free(bn_H_m);
+       // BN_clear_free(c);
+       // BN_clear_free(x_inverse);
+       // BN_CTX_free(bnCtx);
     }
     double end = omp_get_wtime( );
     printf ("registration takes %.16g seconds\n", end - start);

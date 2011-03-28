@@ -386,8 +386,6 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
         return false;
     }
 
-    BN_clear_free(sigma_pow_e);
-    BN_clear_free(bn_H_m);
 
 /* first check for double spending
    if the current token has been spent,
