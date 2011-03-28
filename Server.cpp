@@ -10,8 +10,6 @@ using namespace std;
 
 RSA * Server::rsa = NULL;
 SHA256_CTX Server::sha256;
-int * Server::spent_m;
-int Server::spent_num;
 BIO* Server::out = NULL;
 sqlite3 * Server::db;
 sqlite3 * Server::ds_db;
@@ -227,8 +225,6 @@ void Server::registration() {
 	bytes_stored = 0;
 	remain_token_num = 0;
 
-    spent_num = 0;
-
     out = BIO_new_file ("server_debug.log", "w");
 
     if (out == NULL) {
@@ -304,6 +300,9 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
     byte* _m = new byte [64];
     memcpy (_m, h, 32);
 
+    BIGNUM *sigma_pow_e = BN_new();
+    BIGNUM * bn_H_m = BN_new();
+
     //compute m = (h, H(t,s))
     byte ts[20]; // 4 + 16
     memcpy(ts,t, 4);
@@ -335,10 +334,9 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
 
 //    printf ("Server::verifying token5\n");
     BN_CTX * bnCtx = BN_CTX_new();
-    BIGNUM *sigma_pow_e = BN_new();
+
     BN_mod_exp(sigma_pow_e,sigma,Server::get_e(),Server::get_n(),bnCtx);
 
-    BIGNUM * bn_H_m = BN_new();
     BN_bin2bn(H_mi,128,bn_H_m);
     BN_nnmod(bn_H_m,bn_H_m,Server::get_n(),bnCtx);
 //    printf ("Server::verifying token6\n");
@@ -379,6 +377,9 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
 
         return false;
     }
+
+    BN_clear_free(sigma_pow_e);
+    BN_clear_free(bn_H_m);
 
     /*
     int h_m_int = byte_to_int (H_mi);
