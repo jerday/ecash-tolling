@@ -170,7 +170,7 @@ void Client::registration(int revealed_per_min, int tags_each_reveal, int period
             BN_mod_inverse(x_inverse, x, Server::get_n(), bnCtx);
             BN_mod_mul(_sigma[i], x_inverse, gamma, Server::get_n(), bnCtx);
 
-
+		BN_clear_free(gamma);
     //	printf ("Thread %d HERE5: current i = %d\n", tid, i);
             //output c^d
         //    BIGNUM * c_pow_d = BN_new();

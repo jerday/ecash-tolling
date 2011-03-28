@@ -301,6 +301,7 @@ bool used (byte * _m1, byte * _m2) {
 bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
 {
     //now it is a naive solution, we simply use an array
+
     byte* _m = new byte [64];
     memcpy (_m, h, 32);
 
@@ -377,6 +378,13 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
         BIO_puts (out, "\nsigma=");
         BN_print (out, sigma);
 
+	free(_m);
+	BN_CTX_free(bnCtx);
+	BN_clear_free(sigma_pow_e);
+	BN_clear_free(bn_H_m);
+
+	BN_clear_free(bn_m);
+
         return false;
     }
 
@@ -406,18 +414,19 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
     //printf ("i1 = %d %d\n", *((int*) (&i1)), *((int*)(&i1) + 1));
 
 	sqlite3_stmt * ds_stmt; //double spending check statement
-	sqlite3_prepare_v2(db, "select m1 from spent_tags where m1 = (?)",-1,&ds_stmt,0);
+	string query1 = "select m1 from spent_tags where m1 = (?)";
+	sqlite3_prepare_v2(db, query1.c_str(),-1,&ds_stmt,0);
 	sqlite3_bind_int64(ds_stmt,1,i1);
 	int res = sqlite3_step (ds_stmt);
-//	printf ("res = %d\n", res);
+	sqlite3_finalize(ds_stmt);
+
+//printf ("res = %d\n", res);
 //	printf ("SQLITE_DONE = %d\n", SQLITE_DONE);
 //	printf ("SQLITE_ROW = %d\n", SQLITE_ROW);
-   // int res = SQLITE_DONE;
     	if (res == SQLITE_DONE) {//no record is the same
 		bytes_stored += 64 / 8;
     		/* The token has now been verified. Add the first 64 bits of H_mi to the database */
 		sqlite3_stmt * stmt;
-		sqlite3_stmt * bc_stmt;
 
 //		if (bytes_stored == 0) {
  //   			string query = "BEGIN";
@@ -432,24 +441,38 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
     		string query = "INSERT INTO spent_tags VALUES(?)";
     		sqlite3_prepare_v2(db,query.c_str(),-1,&stmt,0);
     		sqlite3_bind_int64(stmt,1,i1);
-    //		sqlite3_bind_int(stmt,1,i1);
+    	//	sqlite3_bind_int(stmt,1,i1);
     		sqlite3_step(stmt);
    		//if (bytes_stored % 8000 == 0) {
 		//    printf ("%d tokens verified\n", bytes_stored / 8);
 	//	}
+		sqlite3_finalize(stmt);
+
 	} else if (res == SQLITE_ROW) {
 		//there is already a record,
 		//so it's double spending
 		//we add such token to a double spending database
-		printf ("SERVER: Double spending detected!\n");
+//		printf ("SERVER: Double spending detected!\n");
 		sqlite3_stmt * stmt;
-    		string query = "INSERT INTO double_spent_tags VALUES(?)";
+   		string query = "INSERT INTO double_spent_tags VALUES(?)";
     		sqlite3_prepare_v2(ds_db,query.c_str(),-1,&stmt,0);
     		sqlite3_bind_int64(stmt,1,i1);
-    	//	sqlite3_bind_int(stmt,1,i1);
+    //	sqlite3_bind_int(stmt,1,i1);
     		sqlite3_step(stmt);
+		sqlite3_finalize(stmt);
+
+	free(_m);
+	BN_CTX_free(bnCtx);
+	BN_clear_free(sigma_pow_e);
+	BN_clear_free(bn_H_m);
+
 		return false;
 	}
+
+	free(_m);
+	BN_CTX_free(bnCtx);
+	BN_clear_free(sigma_pow_e);
+	BN_clear_free(bn_H_m);
 
     return true;
 }
