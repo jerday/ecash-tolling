@@ -10,8 +10,6 @@ using namespace std;
 
 RSA * Server::rsa = NULL;
 SHA256_CTX Server::sha256;
-int * Server::spent_m;
-int Server::spent_num;
 BIO* Server::out = NULL;
 sqlite3 * Server::db;
 sqlite3 * Server::ds_db;
@@ -227,8 +225,6 @@ void Server::registration() {
 	bytes_stored = 0;
 	remain_token_num = 0;
 
-    spent_num = 0;
-
     out = BIO_new_file ("server_debug.log", "w");
 
     if (out == NULL) {
@@ -305,6 +301,9 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
     byte* _m = new byte [64];
     memcpy (_m, h, 32);
 
+    BIGNUM *sigma_pow_e = BN_new();
+    BIGNUM * bn_H_m = BN_new();
+
     //compute m = (h, H(t,s))
     byte ts[20]; // 4 + 16
     memcpy(ts,t, 4);
@@ -336,10 +335,9 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
 
 //    printf ("Server::verifying token5\n");
     BN_CTX * bnCtx = BN_CTX_new();
-    BIGNUM *sigma_pow_e = BN_new();
+
     BN_mod_exp(sigma_pow_e,sigma,Server::get_e(),Server::get_n(),bnCtx);
 
-    BIGNUM * bn_H_m = BN_new();
     BN_bin2bn(H_mi,128,bn_H_m);
     BN_nnmod(bn_H_m,bn_H_m,Server::get_n(),bnCtx);
 //    printf ("Server::verifying token6\n");
@@ -388,22 +386,8 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
         return false;
     }
 
-    /*
-    int h_m_int = byte_to_int (H_mi);
-    //printf ("h_m_int = %d\n", h_m_int);
-    for (int i = 0; i < spent_num; ++i) {
-        //if (used(_m, spent_m[i])) {
-	if (h_m_int == spent_m[i]) {
-            printf ("Server: This ticket has been used\n");
-            return false;
-        }
-    }
-    spent_m[spent_num++] = h_m_int;
-//    printf ("Server::verifying token3\n");
-    if (spent_num % 10000 == 0) {
-	    printf ("spent_num = %d\n", spent_num);
-    }
-    */
+    BN_clear_free(sigma_pow_e);
+    BN_clear_free(bn_H_m);
 
 /* first check for double spending
    if the current token has been spent,
@@ -411,7 +395,6 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
    else add it to "db"
    */
     int64_t i1 = byte_to_int64(H_mi);
-    //printf ("i1 = %d %d\n", *((int*) (&i1)), *((int*)(&i1) + 1));
 
 	sqlite3_stmt * ds_stmt; //double spending check statement
 	string query1 = "select m1 from spent_tags where m1 = (?)";
@@ -420,44 +403,25 @@ bool Server::verify_token (byte * h, int *t, BIGNUM * s, BIGNUM * sigma)
 	int res = sqlite3_step (ds_stmt);
 	sqlite3_finalize(ds_stmt);
 
-//printf ("res = %d\n", res);
-//	printf ("SQLITE_DONE = %d\n", SQLITE_DONE);
-//	printf ("SQLITE_ROW = %d\n", SQLITE_ROW);
     	if (res == SQLITE_DONE) {//no record is the same
 		bytes_stored += 64 / 8;
     		/* The token has now been verified. Add the first 64 bits of H_mi to the database */
 		sqlite3_stmt * stmt;
 
-//		if (bytes_stored == 0) {
- //   			string query = "BEGIN";
-  //  			sqlite3_prepare_v2(db,query.c_str(),-1,&bc_stmt,0);
-//			sqlite3_step(bc_stmt);
-//		} else if (bytes_stored % 8000) {
- //   			string query = "COMMIT";
-  //  			sqlite3_prepare_v2(db,query.c_str(),-1,&bc_stmt,0);
-//			sqlite3_step(bc_stmt);
-//		}
-
     		string query = "INSERT INTO spent_tags VALUES(?)";
     		sqlite3_prepare_v2(db,query.c_str(),-1,&stmt,0);
     		sqlite3_bind_int64(stmt,1,i1);
-    	//	sqlite3_bind_int(stmt,1,i1);
     		sqlite3_step(stmt);
-   		//if (bytes_stored % 8000 == 0) {
-		//    printf ("%d tokens verified\n", bytes_stored / 8);
-	//	}
 		sqlite3_finalize(stmt);
 
 	} else if (res == SQLITE_ROW) {
 		//there is already a record,
 		//so it's double spending
 		//we add such token to a double spending database
-//		printf ("SERVER: Double spending detected!\n");
 		sqlite3_stmt * stmt;
    		string query = "INSERT INTO double_spent_tags VALUES(?)";
     		sqlite3_prepare_v2(ds_db,query.c_str(),-1,&stmt,0);
     		sqlite3_bind_int64(stmt,1,i1);
-    //	sqlite3_bind_int(stmt,1,i1);
     		sqlite3_step(stmt);
 		sqlite3_finalize(stmt);
 
@@ -488,5 +452,4 @@ bool Server::payment(byte *h, int *t, BIGNUM * s, BIGNUM * sigma) {
 	if (remain_token_num % 10000 == 0) {
 		printf ("SERVER:: %d tokens payed\n", remain_token_num);
 	}
-//	sqlite3_close(db);
 }
