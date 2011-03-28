@@ -231,7 +231,7 @@ void Server::registration() {
         printf ("debug file failed to establish\n");
         exit (-1);
     } else {
-        printf ("debug file established\n");
+     //   printf ("debug file established\n");
     }
 
     /* Create the database of spent tags */

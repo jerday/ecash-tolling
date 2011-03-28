@@ -18,7 +18,7 @@ Client::Client() {
         printf ("debug file failed to establish\n");
         exit (-1);
     } else {
-        printf ("debug file established\n");
+    //    printf ("debug file established\n");
     }
     cc_bytes = 0;
 
@@ -27,10 +27,20 @@ Client::Client() {
 }
 
 Client::~Client() {
-    //free(_i);
-    //free(_m);
-    //free(_t);
+}
 
+void Client::clear() {
+	for (int i = 0; i < num_tags; ++i) {
+		free(_t[i]);
+		free(_m[i]);
+		BN_clear_free (_r[i]);
+		BN_clear_free (_s[i]);
+		BN_clear_free (_sigma[i]);
+	}
+
+
+	free(_m);
+	free(_t);
 //    BN_clear_free(*_r);
  //   BN_clear_free(*_s);
   //  BN_clear_free(*_sigma);
@@ -50,8 +60,8 @@ void Client::registration(int revealed_per_min, int tags_each_reveal, int period
 
     int num_times = (int) (revealed_per_min * 60 * 24 * period_length);
     num_tags = num_times * tags_each_reveal;
-    printf ("number of tags in total = %d\n", num_tags);
-    printf ("number of times = %d\n", num_times);
+    //printf ("number of tags in total = %d\n", num_tags);
+    //printf ("number of times = %d\n", num_times);
   //  num_tags = 1;
 
     //debug
@@ -93,11 +103,11 @@ void Client::registration(int revealed_per_min, int tags_each_reveal, int period
         num_threads(4)
     {
         int tid = omp_get_thread_num();
-        if (tid == 0)
-        {
-            nthreads = omp_get_num_threads();
-            printf("Number of threads = %d\n", nthreads);
-        }
+        //if (tid == 0)
+       // {
+          //  nthreads = omp_get_num_threads();
+         //   printf("Number of threads = %d\n", nthreads);
+        //}
     //    printf("Thread %d starting...\n",tid);
         SHA256_CTX sha256;
         BN_CTX * bnCtx = BN_CTX_new();
@@ -112,9 +122,9 @@ void Client::registration(int revealed_per_min, int tags_each_reveal, int period
         BIGNUM * x_inverse = BN_new();
         #pragma omp for schedule(static)
         for(i = 0; i < num_tags; i++) {
-		if (i % 1000== 0) {
-			printf ("i = %d tid = %d\n", i, tid);
-		}
+	//	if (i % 1000== 0) {
+	//		printf ("i = %d tid = %d\n", i, tid);
+	//	}
             // For each ticket i, the user sets m = (H(i,r),H(t,s)) where r and
             // s are random salts.
     //        printf ("Thread %d: current i = %d\n", tid, i);
@@ -187,12 +197,12 @@ void Client::registration(int revealed_per_min, int tags_each_reveal, int period
 
 
         }
-       // BN_clear_free(x);
-       // BN_clear_free(x_pow_e);
-       // BN_clear_free(bn_H_m);
-       // BN_clear_free(c);
-       // BN_clear_free(x_inverse);
-       // BN_CTX_free(bnCtx);
+       BN_clear_free(x);
+       BN_clear_free(x_pow_e);
+       BN_clear_free(bn_H_m);
+       BN_clear_free(c);
+       BN_clear_free(x_inverse);
+       BN_CTX_free(bnCtx);
     }
     double end = omp_get_wtime( );
     printf ("registration takes %.16g seconds\n", end - start);
@@ -258,9 +268,9 @@ void Client::reveal(float percentage) {
 void Client::payment() {
     double start = omp_get_wtime( );
 	for (int i = 0; i < num_tags; ++i) {
-		if (i % 1000 == 0) {
-			printf ("pay for i = %d\n", i);
-		}
+//		if (i % 1000 == 0) {
+//			printf ("pay for i = %d\n", i);
+//		}
 		if (used[i])
 			continue;
         	if (Server::payment (_m[i], _t[0], _s[i], _sigma[i])) {

@@ -14,13 +14,15 @@ int main(int argc, char** argv)
 	// Set up the server databases
 	Server::registration();
 
-	for(int i = 0; i < 10; i++) {
+	for(int i = 0; i < 100; i++) {
+		printf ("client #%d:\n", i);
 		Client c = Client();
 		c.registration(1,1,30/*30*/);
 		c.reveal(0.5);
 		c.payment();
-		printf ("Total communication cost = %d bytes\n", c.cc_bytes);
-		printf ("Stored Bytes = %d\n", Server::bytes_stored);
+		//printf ("Total communication cost = %d bytes\n", c.cc_bytes);
+		//printf ("Stored Bytes = %d\n", Server::bytes_stored);
+		c.clear();	
 	}
 
 	// Close databases
